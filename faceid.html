@@ -8,10 +8,63 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/webcamjs/1.0.26/webcam.js"></script>
     <script src="../faceid-app-web/js/faceid.js"></script>
     <style>
-       #results{
+        
+        
+        .buttons {
+            text-align: center;
+        }  
+        
+
+        .buttons input[type="submit"] {
+            cursor: pointer;
+            background: #8edf5d;
+            color: #fff;
+            border: none;
+            padding: 8px 30px;
+            font-size: 15px;
+            border-radius: 5px;
+            opacity: 0.9;
+        }
+
+        ul.menulist {
+            text-align: center;
+        }
+
+        ul.menulist li {
+            list-style: none;
+            display: inline-block;
+            background: #f1f1f1;
+            padding: 10px 30px;
+            font-size: 15px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+        
+        ul.menulist li:hover {
+            opacity: 1;
+            background: #ddd;
+        }
+
+       #signupresults,  #loginresults{
            width: 400px;
            height: 400px;
        }
+
+       #signup, #login {
+           width: 50%;
+           height: 50%;
+           float: left;
+       }
+
+       #signup{
+            display:none;
+        }
+
+        #login{
+            display: none;
+        }
 
     </style>
 
@@ -20,7 +73,10 @@
 <body>
     <!-- Container Start  -->
     <div class="container">
-       
+        <ul class="menulist">
+            <li onclick="toggle('signup')">Signup</li>
+            <li onclick="toggle('login')">Find Match</li>
+        </ul>
         <!-- Signup Form -->
         <div id="signup">
             <form>
@@ -29,16 +85,34 @@
                         <h2>Capture Image here!!!</h2>
                     </legend>
                      
-                    <div id="webcam"></div>
-                    <div id="results"></div>
-
+                    <div id="signupwebcam"></div>
+                    <div id="signupimage"></div>
+                    <div id="signupresult"></div>
                     <div class="buttons">
                         <!--input type="file" value="Capture Image" id="uploadInput" accept="image/png, image/jpeg ;" /-->
-                        <input type="button" value="Capture Image" onclick="takePicture();"/>
+                        <input type="button" value="Capture Image" onclick="takePicture('signup');"/>
                     </div>
                 </fieldset>
             </form>
 
+        </div>
+        <div id="login">
+            <form>
+                <fieldset>
+                    <legend>
+                        <h2>Find if the image already exists!!!</h2>
+                    </legend>
+                    
+                    <div id="loginwebcam"></div>
+                    <div id="loginimage"></div>
+                    <div id="matchresult"></div>
+
+                    <div class="buttons">
+                        <!--input type="file" value="Capture Image" id="uploadInput" accept="image/png, image/jpeg ;" /-->
+                        <input type="button" value="Capture Image" onclick="takePicture('login');"/>
+                    </div>
+                </fieldset>
+            </form>
         </div>
 
         
@@ -73,40 +147,81 @@
 
         }
 
-        function takePicture(){
+        function takePicture(view){
            
             // take the snap shot and display the image in another div
             Webcam.snap( function(data_uri) {
                 //console.log(data_uri);
             // display results in page
                 var d = new Date();
-                document.getElementById('results').innerHTML = '<img src="'+data_uri+'"/>';
+                if(view == 'login') {
+                    document.getElementById('loginimage').innerHTML = '<img src="'+data_uri+'"/>';
+                } else {
+                    document.getElementById('signupimage').innerHTML = '<img src="'+data_uri+'"/>';
+                }
+                
                 var v_blob = b64toBlob(data_uri);
+                var imageId = "img_"+d.getTime()+".jpeg";
                 var params = {
                 Body: v_blob, 
                 Bucket: bucketName, 
-                Key: "img_"+d.getTime()+".jpeg"
+                Key: imageId
              };
             
             s3.putObject(params, function(err, data) {
                 if (err) console.log(err, err.stack); // an error occurred
-                else  {   
-                    console.log(data);           // successful response
+                else  {    // successful response
+                    console.log(data);
+                    if (view == 'signup') {
+                        // send XHR request to  search image API 
+                        var xhr = new XMLHttpRequest();
+                        xhr.onload = function() {
+                            if (xhr.status === 200) { // response is OK
+                                responseObject = JSON.parse(xhr.responseText);
+                                console.log('success='+responseObject);
+                                document.getElementById('signupresult').innerHTML=responseObject['message'];
+                            } else {
+                                responseObject = JSON.parse(xhr.responseText);
+                                console.log('Failure='+responseObject);
+                                document.getElementById('signupresult').innerHTML=responseObject['message'];
+                            }
+                        }
+
+                        xhr.open('POST','https://oubsbs5k1k.execute-api.us-east-1.amazonaws.com/Prod/upload',true);
+                        xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                        xhr.send(JSON.stringify({ "image": imageId}));
+                    }
+                    if (view == 'login') {
+                        // send XHR request to  search image API 
+                        var xhr = new XMLHttpRequest();
+                        xhr.onload = function() {
+                            if (xhr.status === 200) { // response is OK
+                                responseObject = JSON.parse(xhr.responseText);
+                                console.log('success='+responseObject);
+                                document.getElementById('matchresult').innerHTML=responseObject['message'];
+                            } else {
+                                responseObject = JSON.parse(xhr.responseText);
+                                console.log('Failure='+responseObject);
+                                document.getElementById('matchresult').innerHTML=responseObject['message'];
+                            }
+                        }
+
+                        xhr.open('POST','https://oubsbs5k1k.execute-api.us-east-1.amazonaws.com/Prod/searchimage',true);
+                        xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                        xhr.send(JSON.stringify({ "image": imageId}));
+                     }
+                    Webcam.reset();          
                 }
             
             });
+
+            
+
+
             } );
         }
 
-       Webcam.set({
-                width: 320,
-                height: 240,
-                image_format: 'jpeg',
-                jpeg_quality: 90
-            });
-
-            // attach the webcam to the div
-            Webcam.attach( '#webcam' );
+     
 
         // below code attaches s3 upload function whenever a file is uploaded
         //document.getElementById("uploadInput").addEventListener("change", uploadImageToS3Bucket, false);
@@ -121,6 +236,35 @@
                     ia[i] = byteString.charCodeAt(i);
                 }
                 return new Blob([ab], { type: 'image/jpeg' });
+        }
+
+
+        
+        function toggle(view){
+            Webcam.set({
+                    width: 320,
+                    height: 240,
+                    image_format: 'jpeg',
+                    jpeg_quality: 90
+                });
+
+            
+            if(view ===  "login"){
+                document.getElementById('matchresult').innerHTML='';
+                Webcam.attach( '#loginwebcam' );
+                document.getElementById('login').style.display = 'block';
+                document.getElementById('signup').style.display = 'none'
+            }
+            else {
+                // attach the webcam to the div
+                document.getElementById('signupresult').innerHTML='';
+                Webcam.attach( '#signupwebcam' );
+                document.getElementById('signup').style.display = 'block';
+                document.getElementById('login').style.display = 'none';
+            }
+
+           
+        
         }
     </script>
 </body>
