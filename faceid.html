@@ -5,92 +5,13 @@
     <title>FaceId App</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.734.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webcamjs/1.0.26/webcam.js"></script>
     <script src="../faceid-app-web/js/faceid.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-        .container {
-            margin: 0px auto;
-            width: 80%;
-            font-family: 'Open Sans', sans-serif;
-        }
-        
-        div#signup,div#login {
-            width: 50%;
-            float: left;
-        }   
-        .filed-wrap {
-            margin: 20px 0px;
-        }
-        
-        .filed-wrap label {
-            width: 30%;
-            text-align: right;
-            float: left;
-            padding: 10px 0px 0px 0px;
-            font-size: 13px;
-        }
-        
-        .filed-wrap input {
-            width: 68%;
-            margin: 0px 0px 0px 2%;
-            padding: 10px;
-            border: none;
-            background: #f1f1f1;
-        }
-        
-        .buttons {
-            text-align: center;
-        }  
-        
-        .filed-wrap input:focus {
-            outline: none;
-            background: #ddd;
-        }
-        
-        .buttons input[type="submit"] {
-            cursor: pointer;
-            background: #8edf5d;
-            color: #fff;
-            border: none;
-            padding: 8px 30px;
-            font-size: 15px;
-            border-radius: 5px;
-            opacity: 0.9;
-        }
-        
-        .buttons input[type="submit"]:hover {
-            opacity: 1;
-        }
-        ul.menulist {
-            text-align: center;
-        }
-
-        ul.menulist li {
-            list-style: none;
-            display: inline-block;
-            background: #f1f1f1;
-            padding: 10px 30px;
-            font-size: 15px;
-            text-transform: uppercase;
-            font-weight: bold;
-            letter-spacing: 2px;
-            opacity: 0.9;
-        }
-        
-        ul.menulist li:hover {
-            opacity: 1;
-            background: #ddd;
-        }
-
-        #signup{
-            display:none;
-        }
-
-        #login{
-            display: none;
-        }
+       #results{
+           width: 400px;
+           height: 400px;
+       }
 
     </style>
 
@@ -99,87 +20,30 @@
 <body>
     <!-- Container Start  -->
     <div class="container">
-        <ul class="menulist">
-            <li onclick="toggle('signup')">Signup</li>
-            <li onclick="toggle('login')">Login</li>
-        </ul>
+       
         <!-- Signup Form -->
         <div id="signup">
             <form>
                 <fieldset>
                     <legend>
-                        <h2>Upload Image here!!!</h2>
+                        <h2>Capture Image here!!!</h2>
                     </legend>
-
-                    <!--div class="filed-wrap">
-                        <label for="username">Enter UserName:</label>
-                        <input type="text" placeholder="Enter Username" id="username"></input>
-                    </div>
-
-                    <div class="filed-wrap">
-                        <label for="userpwd">Enter Password:</label>
-                        <input type="password" placeholder="Enter Password" id="userpwd"></input>
-                    </div>
-
-                    <div class="filed-wrap">
-                        <label for="mobileno">Enter Mobile Number:</label>
-                        <input type="number" placeholder="Enter Mobile number" id="mobileno"></input>
-                    </div>
-
-                    <div class="filed-wrap">
-                        <label for="useremail">Enter User Email:</label>
-                        <input type="email" placeholder="Enter Email Id" id="useremail"></input>
-                    </div-->
+                     
+                    <div id="webcam"></div>
+                    <div id="results"></div>
 
                     <div class="buttons">
-                        <input type="file" value="Upload Image" id="uploadInput" accept="image/png, image/jpeg ;capture=camera" />
+                        <!--input type="file" value="Capture Image" id="uploadInput" accept="image/png, image/jpeg ;" /-->
+                        <input type="button" value="Capture Image" onclick="takePicture();"/>
                     </div>
                 </fieldset>
             </form>
 
         </div>
 
-        <div class="verticalSeparator"></div>
-        <!-- Login Form -->
-        <div id="login">
-            <form>
-                <fieldset>
-                    <legend>
-                        <h2>Login Here!!!</h2>
-                    </legend>
-                    <div id="loginDiv">
-                        <div class="labels">
-                            <label for="username">Enter UserName:</label>
-                            <label for="userpwd">Enter Password:</label>
-                        </div>
-                        <div class="inputFields">
-                            <input type="text" placeholder="Enter Username" id="username"></input>
-                            <input type="password" placeholder="Enter Password" id="userpwd"></input>
-                        </div>
-                    </div>
-                    <div class="buttons">
-                        <input type="submit" value="Login" />
-                    </div>
-                </fieldset>
-            </form>
-        </div>
-    </div>
+        
     <!-- Container End -->
     <script>
-
-
-        function toggle(view){
-            if(view ===  "login"){
-                document.getElementById('login').style.display = 'block';
-                document.getElementById('signup').style.display = 'none'
-            }
-            else {
-                document.getElementById('signup').style.display = 'block';
-                document.getElementById('login').style.display = 'none';
-            }
-        
-        }
-
         function  uploadImageToS3Bucket() {
             console.log(s3);
             // list bucket objects 
@@ -209,9 +73,55 @@
 
         }
 
+        function takePicture(){
+           
+            // take the snap shot and display the image in another div
+            Webcam.snap( function(data_uri) {
+                //console.log(data_uri);
+            // display results in page
+                var d = new Date();
+                document.getElementById('results').innerHTML = '<img src="'+data_uri+'"/>';
+                var v_blob = b64toBlob(data_uri);
+                var params = {
+                Body: v_blob, 
+                Bucket: bucketName, 
+                Key: "img_"+d.getTime()+".jpeg"
+             };
+            
+            s3.putObject(params, function(err, data) {
+                if (err) console.log(err, err.stack); // an error occurred
+                else  {   
+                    console.log(data);           // successful response
+                }
+            
+            });
+            } );
+        }
 
+       Webcam.set({
+                width: 320,
+                height: 240,
+                image_format: 'jpeg',
+                jpeg_quality: 90
+            });
 
-        document.getElementById("uploadInput").addEventListener("change", uploadImageToS3Bucket, false);
+            // attach the webcam to the div
+            Webcam.attach( '#webcam' );
+
+        // below code attaches s3 upload function whenever a file is uploaded
+        //document.getElementById("uploadInput").addEventListener("change", uploadImageToS3Bucket, false);
+
+        // this function converts base64 image to blob which is used to actually upload to s3 bucket
+        function b64toBlob(dataURI) {
+                var byteString = atob(dataURI.split(',')[1]);
+                var ab = new ArrayBuffer(byteString.length);
+                var ia = new Uint8Array(ab);
+
+                for (var i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                return new Blob([ab], { type: 'image/jpeg' });
+        }
     </script>
 </body>
 
