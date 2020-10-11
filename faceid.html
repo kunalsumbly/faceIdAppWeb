@@ -85,6 +85,24 @@
                         <h2>Capture Image here!!!</h2>
                     </legend>
                      
+                    <div id="signupdetails">
+                        <label for="firstname">First Name</label>
+                        <input type="text" id="firstname">
+                        <label for="lastname">Last Name</label>
+                        <input type="text" id="lastname"> <br/>
+                        <label for="dateofbirth">Date of Birth</label>
+                        <input type="date" id="dateofbirth">
+                        <label for="dateofreport">Date of Report</label>
+                        <input type="date" id="dateofreport"><br/>
+                        <label for="missingfromlocation">Missing From Location</label>
+                        <input type="text" style="width: 50%;" id="missingfromlocation">
+                        <label for="age">Age</label>
+                        <input type="text" id="age"><br/>
+                        <label for="familycontactphone">Family Contact Number</label>
+                        <input type="text" id="familycontactphone">
+                        <label for="reportingcentrecontact">Reporting Centre Email Contact</label>
+                        <input type="text" id="reportingcentrecontact">
+                    </div>
                     <div id="signupwebcam"></div>
                     <div id="signupimage"></div>
                     <div id="signupresult"></div>
@@ -187,9 +205,25 @@
                             }
                         }
 
-                        xhr.open('POST','https://oubsbs5k1k.execute-api.us-east-1.amazonaws.com/Prod/upload',true);
+                        xhr.open('POST','https://e10yb6nc76.execute-api.us-east-1.amazonaws.com/Prod/upload',true);
                         xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-                        xhr.send(JSON.stringify({ "image": imageId}));
+                        
+                        xhr.send(JSON.stringify(
+                                                { 
+                                                        "image": imageId,
+                                                        "missingpersondata" : 
+                                                    {
+                                                            "firstname":document.getElementById('firstname').value,
+                                                            "lastname":document.getElementById('lastname').value,
+                                                            "dateofbirth":document.getElementById('dateofbirth').value,
+                                                            "missingfromlocation":document.getElementById('missingfromlocation').value,
+                                                            "dateofreport":document.getElementById('dateofreport').value,
+                                                            "age":document.getElementById('age').value,
+                                                            "familycontactphone":document.getElementById('familycontactphone').value,
+                                                            "reportingcentrecontact":document.getElementById('reportingcentrecontact').value,
+                                                    }
+                                                }
+                                        ));
                     }
                     if (view == 'login') {
                         // send XHR request to  search image API 
@@ -206,7 +240,7 @@
                             }
                         }
 
-                        xhr.open('POST','https://oubsbs5k1k.execute-api.us-east-1.amazonaws.com/Prod/searchimage',true);
+                        xhr.open('POST','https://e10yb6nc76.execute-api.us-east-1.amazonaws.com/Prod/searchimage',true);
                         xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
                         xhr.send(JSON.stringify({ "image": imageId}));
                      }
